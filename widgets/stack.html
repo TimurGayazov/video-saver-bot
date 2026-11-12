@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;user-select:none;-webkit-tap-highlight-color:transparent}
+body{background:#f2f2ef;color:#18191b;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;height:540px;padding:16px 18px 28px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:0.6px}
+.top{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:1px solid #e0e0dc}
+.brand{font-weight:800;font-size:13px;display:flex;align-items:center;gap:6px}
+.badge{background:#b6f528;color:#141517;padding:2px 6px;border-radius:3px}
+.exp{font-size:11px;color:#828488;font-weight:600}
+.stats{display:flex;justify-content:space-between;padding-top:8px;font-size:12px;font-weight:700;color:#5a5c60}
+.wrap{flex:1;width:100%;position:relative;margin:4px 0;overflow:hidden;background:#f2f2ef}
+canvas{display:block;width:100%;height:100%}
+.st{font-size:13px;margin-bottom:10px;height:18px;display:flex;align-items:center;gap:4px}
+.st span{color:#686a6e}
+.btn{width:100%;height:74px;background:#686a6c;color:#ffffff;border:none;border-radius:6px;font-size:14px;font-weight:700;letter-spacing:0.8px;cursor:pointer}
+.btn:active{background:#4e5052}
+.btn.re{background:#18191b;color:#b6f528}
+</style>
+</head>
+<body>
+<div>
+  <div class="top">
+    <div class="brand">TIMUUUU <span class="badge">DEV</span></div>
+    <div class="exp mono">EXPERIMENT / 002</div>
+  </div>
+  <div class="stats mono">
+    <div>STACK / <span id="sc">00</span></div>
+    <div>BEST / <span id="bs">00</span></div>
+  </div>
+</div>
+<div class="wrap"><canvas id="c" width="260" height="250"></canvas></div>
+<div>
+  <div class="st" id="st"><b>ГОТОВ</b> <span>/ нажми старт</span></div>
+  <button class="btn re" id="btn">СТАРТ</button>
+</div>
+<script>
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+const scE=document.getElementById('sc');
+const bsE=document.getElementById('bs');
+const stE=document.getElementById('st');
+const btn=document.getElementById('btn');
+const W=260,H=250;
+c.width=W;
+c.height=H;
+
+const COS=0.866,SIN=0.5,BH=10,SZ=68,TOL=5;
+let st=[],db=[],fl=[],cur=null,sc=0,bs=0,cb=0,run=0,cy=0,tcy=0,lastT=0,lockUntil=0;
+
+function p2(n){return n<10?'0'+n:String(n);}
+function setSt(b,s){stE.innerHTML='<b>'+b+'</b> <span>/ '+s+'</span>';}
+
+function box(b,ox,oy,act,glow){
+  if(b.w<=0.5||b.d<=0.5)return;
+  const press=glow>0?Math.sin(glow*Math.PI)*2.5:0;
+  const x=b.x,y=b.y-press,z=b.z,w=b.w,d=b.d,h=b.h-0.8;
+  const p100x=ox+(x+w-z)*COS,p100y=oy+(x+w+z)*SIN-y;
+  const p001x=ox+(x-z-d)*COS,p001y=oy+(x+z+d)*SIN-y;
+  const p101x=ox+(x+w-z-d)*COS,p101y=oy+(x+w+z+d)*SIN-y;
+  const p010x=ox+(x-z)*COS,p010y=oy+(x+z)*SIN-y-h;
+  const lit=act||glow>0.45;
+
+  ctx.fillStyle=lit?'#8fd115':'#16171a';
+  ctx.beginPath();
+  ctx.moveTo(p001x,p001y-h);ctx.lineTo(p101x,p101y-h);ctx.lineTo(p101x,p101y);ctx.lineTo(p001x,p001y);
+  ctx.fill();
+
+  ctx.fillStyle=lit?'#a5e81e':'#23252a';
+  ctx.beginPath();
+  ctx.moveTo(p101x,p101y-h);ctx.lineTo(p100x,p100y-h);ctx.lineTo(p100x,p100y);ctx.lineTo(p101x,p101y);
+  ctx.fill();
+
+  ctx.fillStyle=lit?'#b9f829':'#32353d';
+  ctx.beginPath();
+  ctx.moveTo(p010x,p010y);ctx.lineTo(p100x,p100y-h);ctx.lineTo(p101x,p101y-h);ctx.lineTo(p001x,p001y-h);
+  ctx.fill();
+}
+
+function drawWave(f,ox,oy){
+  const t=1-f.t,g=t*14;
+  const x=f.x-g/2,z=f.z-g/2,w=f.w+g,d=f.d+g,y=f.y-t*1.5,h=f.h+t*3;
+  const p100x=ox+(x+w-z)*COS,p100y=oy+(x+w+z)*SIN-y;
+  const p001x=ox+(x-z-d)*COS,p001y=oy+(x+z+d)*SIN-y;
+  const p101x=ox+(x+w-z-d)*COS,p101y=oy+(x+w+z+d)*SIN-y;
+  const p010x=ox+(x-z)*COS,p010y=oy+(x+z)*SIN-y-h;
+
+  ctx.strokeStyle=f.t>0.5?'#9be014':'#c7d4a8';
+  ctx.lineWidth=2.2*f.t+0.5;
+  ctx.beginPath();
+  ctx.moveTo(p010x,p010y);ctx.lineTo(p100x,p100y-h);ctx.lineTo(p101x,p101y-h);ctx.lineTo(p001x,p001y-h);ctx.closePath();
+  ctx.moveTo(p001x,p001y);ctx.lineTo(p101x,p101y);ctx.lineTo(p100x,p100y);
+  ctx.moveTo(p001x,p001y-h);ctx.lineTo(p001x,p001y);
+  ctx.moveTo(p101x,p101y-h);ctx.lineTo(p101x,p101y);
+  ctx.moveTo(p100x,p100y-h);ctx.lineTo(p100x,p100y);
+  ctx.stroke();
+}
+
+function grid(ox,oy){
+  if(oy>H+120)return;
+  ctx.strokeStyle='#e3e3df';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  const s=20,n=5,lim=n*s;
+  for(let i=-n;i<=n;i++){
+    const k=i*s;
+    ctx.moveTo(ox+(k+lim)*COS,oy+(k-lim)*SIN);
+    ctx.lineTo(ox+(k-lim)*COS,oy+(k+lim)*SIN);
+    ctx.moveTo(ox+(-lim-k)*COS,oy+(-lim+k)*SIN);
+    ctx.lineTo(ox+(lim-k)*COS,oy+(lim+k)*SIN);
+  }
+  ctx.stroke();
+}
+
+function setupIdle(){
+  sc=0;cb=0;scE.innerText='00';st=[];db=[];fl=[];cy=0;tcy=0;run=0;cur=null;
+  btn.innerText='СТАРТ';btn.className='btn re';
+  setSt('ГОТОВ','нажми старт');
+  st.push({x:-SZ/2,y:0,z:-SZ/2,w:SZ,d:SZ,h:BH*1.6,glow:0});
+}
+
+function init(){
+  sc=0;cb=0;scE.innerText='00';st=[];db=[];fl=[];cy=0;tcy=0;run=1;lastT=0;
+  btn.innerText='ПОСТАВИТЬ ЭТАЖ';btn.className='btn';
+  setSt('В ПРОЦЕССЕ','поймай центр блока');
+  st.push({x:-SZ/2,y:0,z:-SZ/2,w:SZ,d:SZ,h:BH*1.6,glow:0});
+  next();
+}
+
+function next(){
+  const p=st[st.length-1],ax=sc%2===0?'x':'z',rng=104,sp=Math.min(92+sc*2.8,215);
+  cur={
+    x:ax==='x'?p.x-rng:p.x,
+    y:p.y+p.h,
+    z:ax==='z'?p.z-rng:p.z,
+    w:p.w,d:p.d,h:BH,ax:ax,dir:1,
+    min:(ax==='x'?p.x:p.z)-rng,
+    max:(ax==='x'?p.x:p.z)+rng,
+    sp:sp,ent:0
+  };
+  if(sc>4)tcy=(sc-4)*BH;
+  if(st.length>16)st.shift();
+}
+
+function drop(){
+  if(!run||!cur)return;
+  const p=st[st.length-1],ix=cur.ax==='x',dl=ix?cur.x-p.x:cur.z-p.z,ad=Math.abs(dl),lim=ix?p.w:p.d;
+  if(ad>=lim){
+    cur=null;run=0;lockUntil=Date.now()+350;
+    btn.innerText='НАЧАТЬ ЗАНОВО';btn.className='btn re';
+    setSt('ПРОМАХ','итоговая высота: '+sc);
+    if(window.TelegramWidget&&sc>0)TelegramWidget.request('stack_score:'+sc);
+    return;
+  }
+  let isPerfect=false;
+  if(ad<=TOL){
+    isPerfect=true;
+    cur.x=p.x;cur.z=p.z;cb++;
+    if(cb>=3){
+      if(ix&&cur.w<SZ){cur.w=Math.min(SZ,cur.w+6);cur.x-=3;}
+      else if(!ix&&cur.d<SZ){cur.d=Math.min(SZ,cur.d+6);cur.z-=3;}
+      setSt('КОМБО ×'+cb,'расширение платформы');
+    }else setSt('ТОЧНО','идеальное попадание');
+    fl.push({x:cur.x,y:cur.y,z:cur.z,w:cur.w,d:cur.d,h:cur.h,t:1});
+  }else{
+    cb=0;const ov=lim-ad,cut={x:cur.x,y:cur.y,z:cur.z,w:cur.w,d:cur.d,h:cur.h,vy:0,vx:0,vz:0};
+    if(ix){
+      cur.w=ov;cut.w=ad;
+      if(dl>0){cut.x=p.x+p.w;cut.vx=65;}else{cut.x=cur.x;cur.x=p.x;cut.vx=-65;}
+    }else{
+      cur.d=ov;cut.d=ad;
+      if(dl>0){cut.z=p.z+p.d;cut.vz=65;}else{cut.z=cur.z;cur.z=p.z;cut.vz=-65;}
+    }
+    if(ad>1)db.push(cut);
+    setSt('СРЕЗ '+(100-Math.round(ov/lim*100))+'%','точность снижена');
+  }
+  st.push({x:cur.x,y:cur.y,z:cur.z,w:cur.w,d:cur.d,h:cur.h,glow:isPerfect?1:0});
+  sc++;scE.innerText=p2(sc);
+  if(sc>bs){bs=sc;bsE.innerText=p2(bs);}
+  next();
+}
+
+function loop(now){
+  if(!lastT)lastT=now;
+  const dt=Math.min((now-lastT)*0.001,0.05);
+  lastT=now;
+
+  cy+=(tcy-cy)*Math.min(1,dt*5.5);
+  if(cur){
+    if(cur.ent<1)cur.ent=Math.min(1,cur.ent+dt*3.2);
+    const e=1-cur.ent,ease=1-e*e*e;
+    const curSp=cur.sp*(0.35+0.65*ease);
+    if(run){
+      if(cur.ax==='x'){cur.x+=curSp*cur.dir*dt;if(cur.x>=cur.max){cur.x=cur.max;cur.dir=-1;}if(cur.x<=cur.min){cur.x=cur.min;cur.dir=1;}}
+      else{cur.z+=curSp*cur.dir*dt;if(cur.z>=cur.max){cur.z=cur.max;cur.dir=-1;}if(cur.z<=cur.min){cur.z=cur.min;cur.dir=1;}}
+    }
+  }
+  if(st.length){
+    const top=st[st.length-1];
+    if(top.glow>0)top.glow=Math.max(0,top.glow-dt*2.6);
+  }
+  for(let i=db.length-1;i>=0;i--){
+    const q=db[i];q.vy-=1250*dt;q.y+=q.vy*dt;q.x+=q.vx*dt;q.z+=q.vz*dt;
+    if(q.y<cy-140)db.splice(i,1);
+  }
+  for(let i=fl.length-1;i>=0;i--){fl[i].t-=dt*2.4;if(fl[i].t<=0)fl.splice(i,1);}
+
+  ctx.fillStyle='#f2f2ef';
+  ctx.fillRect(0,0,W,H);
+
+  const ox=W/2,oy=H*0.68+cy;
+  grid(ox,oy);
+  for(let i=0;i<st.length;i++)box(st[i],ox,oy,0,st[i].glow);
+  for(let i=0;i<fl.length;i++)drawWave(fl[i],ox,oy);
+  for(let i=0;i<db.length;i++)box(db[i],ox,oy,0,0);
+  if(cur)box(cur,ox,oy,1,0);
+  requestAnimationFrame(loop);
+}
+
+btn.addEventListener('pointerdown',function(e){
+  e.preventDefault();
+  if(Date.now()<lockUntil)return;
+  if(run)drop();else init();
+});
+c.addEventListener('pointerdown',function(e){
+  e.preventDefault();
+  if(run)drop();
+});
+
+setupIdle();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
