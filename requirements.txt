@@ -3,3 +3,4 @@ python-dotenv==1.2.4
 yt-dlp==2026.10.26
 pydantic-settings==2.13.0
 psutil==7.2.1
+curl_cffi==0.17.0
