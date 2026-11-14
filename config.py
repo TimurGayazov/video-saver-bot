@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     BOT_TOKEN_DEV: str | None = None
     BOT_TOKEN_PROD: str | None = None
     widgets_dir: Path = Field(default=PROJECT_ROOT / "widgets", alias="WIDGETS_DIR")
-    root_telegram_id: int = Field(default=596169119, alias="ROOT_TELEGRAM_ID")
+    root_telegram_id: int = Field(alias="ROOT_TELEGRAM_ID")
 
     bot_token: str = ""
 
